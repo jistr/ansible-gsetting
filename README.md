@@ -9,7 +9,7 @@ See also
 Installation
 ------------
 
-    curl https://raw.github.com/jistr/ansible-gsetting/master/gsetting.py > ~/ansible_dir/library/gsetting
+    curl https://raw.githubusercontent.com/jistr/ansible-gsetting/master/gsetting.py > ~/ansible_dir/library/gsetting
 
 Usage examples
 --------------
