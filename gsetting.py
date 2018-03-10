@@ -15,36 +15,62 @@ def _split_key(full_key):
     single_key = key_array[-1]
     return (schema, single_key)
 
+def _get_dbus_bus_address(user):
+    try:
+        pid = subprocess.check_output(['pgrep', '-u', user, 'gnome-session']).strip()
+    except subprocess.CalledProcessError:
+       return None
+
+    if pid:
+        return subprocess.check_output(
+                ['grep', '-z', '^DBUS_SESSION_BUS_ADDRESS', '/proc/' + pid + '/environ']
+                ).strip('\0')
+
 def _set_value(schemadir, user, full_key, value):
     schema, single_key = _split_key(full_key)
-    command = [
-        'export `/usr/bin/dbus-launch`',
-        ';',
-        '/usr/bin/gsettings']
+
+    dbus_addr = _get_dbus_bus_address(user)
+    if not dbus_addr:
+        command = ['export `/usr/bin/dbus-launch`', ';']
+    else:
+        command = ['export', dbus_addr, ';']
+
+    command.append('/usr/bin/gsettings')
+
     if schemadir:
         command.extend(['--schemadir', schemadir])
     command.extend(['set', schema, single_key,
-        "'%s'" % _escape_single_quotes(value),
-        ';',
-        'kill $DBUS_SESSION_BUS_PID &> /dev/null'
-    ])
+        "'%s'" % _escape_single_quotes(value)])
+
+    if not dbus_addr:
+        command.extend([';',
+            'kill $DBUS_SESSION_BUS_PID &> /dev/null'
+        ])
 
     return subprocess.check_output([
         'su', '-', user , '-c', " ".join(command)
     ]).strip()
 
 def _get_value(schemadir, user, full_key):
-
     schema, single_key = _split_key(full_key)
-    command = ['export `/usr/bin/dbus-launch`',
-        ';',
-        '/usr/bin/gsettings']
+
+    dbus_addr = _get_dbus_bus_address(user)
+    if not dbus_addr:
+        command = ['export `/usr/bin/dbus-launch`', ';']
+    else:
+        command = ['export', dbus_addr, ';']
+
+    command.append('/usr/bin/gsettings')
+
     if schemadir:
         command.extend(['--schemadir', schemadir])
-    command.extend(['get', schema, single_key,
-        ';',
-        'kill $DBUS_SESSION_BUS_PID &> /dev/null'
-    ])
+
+    command.extend(['get', schema, single_key])
+
+    if not dbus_addr:
+        command.extend([';',
+            'kill $DBUS_SESSION_BUS_PID &> /dev/null'
+        ])
 
     return subprocess.check_output([
         'su', '-', user , '-c', " ".join(command)
