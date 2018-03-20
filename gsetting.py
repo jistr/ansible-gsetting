@@ -49,7 +49,7 @@ def _set_value(schemadir, user, full_key, value):
 
     return subprocess.check_output([
         'su', '-', user , '-c', " ".join(command)
-    ]).strip()
+    ])
 
 def _get_value(schemadir, user, full_key):
     schema, single_key = _split_key(full_key)
@@ -74,7 +74,7 @@ def _get_value(schemadir, user, full_key):
 
     return subprocess.check_output([
         'su', '-', user , '-c', " ".join(command)
-    ]).strip()
+    ]).strip().strip("'\"")
 
 def main():
 
