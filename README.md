@@ -24,7 +24,9 @@ Usage examples
                 key=org.gnome.desktop.wm.keybindings.panel-main-menu
                 value="@as []"
 
-Or explicitly define scheme and key isntead of using dash to seperate them, useful when the schema name includeds dashes.
+
+Or explicitly define schema and key instead of using dash to seperate them, 
+useful when the schema name includeds dashes.
 
     - name: do not remember mount password
       gsetting: user=jistr
