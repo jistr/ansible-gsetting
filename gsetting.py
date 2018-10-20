@@ -26,9 +26,11 @@ def _get_dbus_bus_address(user):
                 ['grep', '-z', '^DBUS_SESSION_BUS_ADDRESS', '/proc/' + pid + '/environ']
                 ).strip('\0')
 
-def _set_value(schemadir, user, full_key, value):
-    schema, single_key = _split_key(full_key)
-
+def _set_value(schemadir, schema, user, full_key, value):
+    if schema:
+        single_key = full_key
+    else:
+        schema, single_key = _split_key(full_key)
     dbus_addr = _get_dbus_bus_address(user)
     if not dbus_addr:
         command = ['export `/usr/bin/dbus-launch`', ';']
@@ -51,8 +53,11 @@ def _set_value(schemadir, user, full_key, value):
         'su', '-', user , '-c', " ".join(command)
     ]).strip()
 
-def _get_value(schemadir, user, full_key):
-    schema, single_key = _split_key(full_key)
+def _get_value(schemadir, schema, user, full_key):
+    if schema:
+        single_key = full_key
+    else:
+        schema, single_key = _split_key(full_key)
 
     dbus_addr = _get_dbus_bus_address(user)
     if not dbus_addr:
@@ -83,6 +88,7 @@ def main():
             'state': { 'choices': ['present'], 'default': 'present' },
             'user': { 'required': True },
             'schemadir': { 'required': False },
+            'schema': { 'required': False },
             'key': { 'required': True },
             'value': { 'required': True },
         },
@@ -93,20 +99,18 @@ def main():
     state = module.params['state']
     user = module.params['user']
     schemadir = module.params['schemadir']
+    schema = module.params['schema']
     key = module.params['key']
     value = module.params['value']
 
-    old_value = _get_value(schemadir, user, key)
+    old_value = _get_value(schemadir, schema, user, key)
     changed = old_value != value
 
     if changed and not module.check_mode:
-        _set_value(schemadir, user, key, value)
+        _set_value(schemadir, schema, user, key, value)
 
-    print(json.dumps({
-        'changed': changed,
-        'key': key,
-        'value': value,
-        'old_value': old_value,
-    }))
+    results = {'changed': changed, 'schema': schema, 'key': key, 'value': value, 'old_value': old_value}
+    module.exit_json(**results)
 
-main()
+if __name__ == '__main__':
+    main()

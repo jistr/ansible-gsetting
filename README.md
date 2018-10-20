@@ -24,6 +24,20 @@ Usage examples
                 key=org.gnome.desktop.wm.keybindings.panel-main-menu
                 value="@as []"
 
+Or explicitly define scheme and key isntead of using dash to seperate them, useful when the schema name includeds dashes.
+
+    - name: do not remember mount password
+      gsetting: user=jistr
+                schema=org.gnome.shell.remember
+                key=mount-password
+                value=false
+
+    - name: change dash to dock klick action
+      gsetting: user=jistr
+                schema=org.gnome.shell.extensions.dash-to-dock
+                key=click-action
+                value="previews"
+
 Be careful with string values, which should be passed into GSetting
 single-quoted. You'll need to quote the value twice in YAML:
 
