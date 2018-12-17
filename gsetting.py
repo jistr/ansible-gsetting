@@ -5,6 +5,9 @@ import subprocess
 
 from ansible.module_utils.basic import *
 
+def _check_output_strip(command):
+    return subprocess.check_output(command).decode('utf-8').strip()
+
 def _escape_single_quotes(string):
     return re.sub("'", r"'\''", string)
 
@@ -16,14 +19,14 @@ def _split_key(full_key):
 
 def _get_dbus_bus_address(user):
     try:
-        pid = subprocess.check_output(['pgrep', '-u', user, 'gnome-session']).strip()
+        pid = _check_output_strip(['pgrep', '-u', user, 'gnome-session'])
     except subprocess.CalledProcessError:
        return None
 
     if pid:
-        return subprocess.check_output(
-                ['grep', '-z', '^DBUS_SESSION_BUS_ADDRESS', '/proc/' + pid + '/environ']
-                ).strip('\0')
+        return _check_output_strip(
+            ['grep', '-z', '^DBUS_SESSION_BUS_ADDRESS',
+             '/proc/{}/environ'.format(pid)]).strip('\0')
 
 def _set_value(schemadir, user, full_key, value):
     schema, single_key = _split_key(full_key)
@@ -46,9 +49,7 @@ def _set_value(schemadir, user, full_key, value):
             'kill $DBUS_SESSION_BUS_PID &> /dev/null'
         ])
 
-    return subprocess.check_output([
-        'su', '-', user , '-c', " ".join(command)
-    ]).strip()
+    return _check_output_strip(['su', '-', user , '-c', " ".join(command)])
 
 def _get_value(schemadir, user, full_key):
     schema, single_key = _split_key(full_key)
@@ -71,9 +72,7 @@ def _get_value(schemadir, user, full_key):
             'kill $DBUS_SESSION_BUS_PID &> /dev/null'
         ])
 
-    return subprocess.check_output([
-        'su', '-', user , '-c', " ".join(command)
-    ]).strip()
+    return _check_output_strip(['su', '-', user , '-c', " ".join(command)])
 
 def main():
 
