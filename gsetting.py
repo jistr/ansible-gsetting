@@ -1,5 +1,6 @@
 #!/usr/bin/python
 
+from os import environ
 import re
 import subprocess
 
@@ -18,6 +19,12 @@ def _split_key(full_key):
     return (schema, single_key)
 
 def _get_dbus_bus_address(user):
+    if user is None:
+        if environ.get('DBUS_SESSION_BUS_ADDRESS') is None:
+            return None
+
+        return "DBUS_SESSION_BUS_ADDRESS={}".format(environ['DBUS_SESSION_BUS_ADDRESS'])
+
     try:
         pid = _check_output_strip(['pgrep', '-u', user, 'gnome-session'])
     except subprocess.CalledProcessError:
@@ -49,6 +56,9 @@ def _set_value(schemadir, user, full_key, value):
             'kill $DBUS_SESSION_BUS_PID &> /dev/null'
         ])
 
+    if user is None:
+        return _check_output_strip(['sh', '-c', " ".join(command)])
+
     return _check_output_strip(['su', '-', user , '-c', " ".join(command)])
 
 def _get_value(schemadir, user, full_key):
@@ -72,6 +82,9 @@ def _get_value(schemadir, user, full_key):
             'kill $DBUS_SESSION_BUS_PID &> /dev/null'
         ])
 
+    if user is None:
+        return _check_output_strip(['sh', '-c', " ".join(command)])
+
     return _check_output_strip(['su', '-', user , '-c', " ".join(command)])
 
 def main():
@@ -79,7 +92,7 @@ def main():
     module = AnsibleModule(
         argument_spec = {
             'state': { 'choices': ['present'], 'default': 'present' },
-            'user': { 'required': True },
+            'user': { 'default': None },
             'schemadir': { 'required': False },
             'key': { 'required': True },
             'value': { 'required': True },
