@@ -35,57 +35,43 @@ def _get_dbus_bus_address(user):
             ['grep', '-z', '^DBUS_SESSION_BUS_ADDRESS',
              '/proc/{}/environ'.format(pid)]).strip('\0')
 
-def _set_value(schemadir, user, full_key, value):
-    schema, single_key = _split_key(full_key)
-
+def _run_cmd_with_dbus(user, cmd):
     dbus_addr = _get_dbus_bus_address(user)
     if not dbus_addr:
         command = ['export `/usr/bin/dbus-launch`', ';']
     else:
         command = ['export', dbus_addr, ';']
+    command.extend(cmd)
+    if not dbus_addr:
+        command.extend([';',
+            'kill $DBUS_SESSION_BUS_PID &> /dev/null'
+        ])
 
-    command.append('/usr/bin/gsettings')
+    if user is None:
+        return _check_output_strip(['/bin/sh', '-c', " ".join(command)])
 
+    return _check_output_strip(['su', '-', user , '-c', " ".join(command)])
+
+def _set_value(schemadir, user, full_key, value):
+    schema, single_key = _split_key(full_key)
+
+    command = ['/usr/bin/gsettings']
     if schemadir:
         command.extend(['--schemadir', schemadir])
     command.extend(['set', schema, single_key,
         "'%s'" % _escape_single_quotes(value)])
 
-    if not dbus_addr:
-        command.extend([';',
-            'kill $DBUS_SESSION_BUS_PID &> /dev/null'
-        ])
-
-    if user is None:
-        return _check_output_strip(['sh', '-c', " ".join(command)])
-
-    return _check_output_strip(['su', '-', user , '-c', " ".join(command)])
+    return _run_cmd_with_dbus(user, command)
 
 def _get_value(schemadir, user, full_key):
     schema, single_key = _split_key(full_key)
 
-    dbus_addr = _get_dbus_bus_address(user)
-    if not dbus_addr:
-        command = ['export `/usr/bin/dbus-launch`', ';']
-    else:
-        command = ['export', dbus_addr, ';']
-
-    command.append('/usr/bin/gsettings')
-
+    command = ['/usr/bin/gsettings']
     if schemadir:
         command.extend(['--schemadir', schemadir])
-
     command.extend(['get', schema, single_key])
 
-    if not dbus_addr:
-        command.extend([';',
-            'kill $DBUS_SESSION_BUS_PID &> /dev/null'
-        ])
-
-    if user is None:
-        return _check_output_strip(['sh', '-c', " ".join(command)])
-
-    return _check_output_strip(['su', '-', user , '-c', " ".join(command)])
+    return _run_cmd_with_dbus(user, command)
 
 def main():
 
