@@ -18,6 +18,10 @@ def _split_key(full_key):
     single_key = key_array[-1]
     return (schema, single_key)
 
+def _get_gnome_version():
+    return tuple(map(int, (_check_output_strip(
+        ['gnome-shell', '--version']).split(' ')[2].split('.'))))
+
 def _get_dbus_bus_address(user):
     if user is None:
         if environ.get('DBUS_SESSION_BUS_ADDRESS') is None:
@@ -25,8 +29,15 @@ def _get_dbus_bus_address(user):
 
         return "DBUS_SESSION_BUS_ADDRESS={}".format(environ['DBUS_SESSION_BUS_ADDRESS'])
 
+    pgrep_cmd = ['pgrep', '-u', user, 'gnome-session']
+    gnome_ver = _get_gnome_version()
+    if (gnome_ver >= (3, 33, 90)):
+        # From GNOME 3.33.90 session process has changed
+        # https://github.com/GNOME/gnome-session/releases/tag/3.33.90
+        pgrep_cmd = ['pgrep', '-u', user, '-f', 'session=gnome']
+
     try:
-        pid = _check_output_strip(['pgrep', '-u', user, 'gnome-session'])
+        pid = _check_output_strip(pgrep_cmd)
     except subprocess.CalledProcessError:
        return None
 
