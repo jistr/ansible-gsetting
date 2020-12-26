@@ -49,14 +49,10 @@ def _get_dbus_bus_address(user):
 def _run_cmd_with_dbus(user, cmd):
     dbus_addr = _get_dbus_bus_address(user)
     if not dbus_addr:
-        command = ['export `/usr/bin/dbus-launch`', ';']
+        command = ['dbus-run-session', '--']
     else:
         command = ['export', dbus_addr, ';']
     command.extend(cmd)
-    if not dbus_addr:
-        command.extend([';',
-            'kill $DBUS_SESSION_BUS_PID &> /dev/null'
-        ])
 
     if user is None:
         return _check_output_strip(['/bin/sh', '-c', " ".join(command)])
