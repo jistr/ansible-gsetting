@@ -46,8 +46,7 @@ def _get_dbus_bus_address(user):
             ['grep', '-z', '^DBUS_SESSION_BUS_ADDRESS',
              '/proc/{}/environ'.format(pid)]).strip('\0')
 
-def _run_cmd_with_dbus(user, cmd):
-    dbus_addr = _get_dbus_bus_address(user)
+def _run_cmd_with_dbus(user, cmd, dbus_addr):
     if not dbus_addr:
         command = ['dbus-run-session', '--']
     else:
@@ -59,7 +58,7 @@ def _run_cmd_with_dbus(user, cmd):
 
     return _check_output_strip(['su', '-', user , '-c', " ".join(command)])
 
-def _set_value(schemadir, user, full_key, value):
+def _set_value(schemadir, user, full_key, value, dbus_addr):
     schema, single_key = _split_key(full_key)
 
     command = ['/usr/bin/gsettings']
@@ -68,9 +67,9 @@ def _set_value(schemadir, user, full_key, value):
     command.extend(['set', schema, single_key,
         "'%s'" % _escape_single_quotes(value)])
 
-    return _run_cmd_with_dbus(user, command)
+    return _run_cmd_with_dbus(user, command, dbus_addr)
 
-def _get_value(schemadir, user, full_key):
+def _get_value(schemadir, user, full_key, dbus_addr):
     schema, single_key = _split_key(full_key)
 
     command = ['/usr/bin/gsettings']
@@ -78,7 +77,7 @@ def _get_value(schemadir, user, full_key):
         command.extend(['--schemadir', schemadir])
     command.extend(['get', schema, single_key])
 
-    return _run_cmd_with_dbus(user, command)
+    return _run_cmd_with_dbus(user, command, dbus_addr)
 
 def main():
 
@@ -87,8 +86,7 @@ def main():
             'state': { 'choices': ['present'], 'default': 'present' },
             'user': { 'default': None },
             'schemadir': { 'required': False },
-            'key': { 'required': True },
-            'value': { 'required': True },
+            'settings': { 'type': 'dict', "required": True },
         },
         supports_check_mode = True,
     )
@@ -97,20 +95,31 @@ def main():
     state = module.params['state']
     user = module.params['user']
     schemadir = module.params['schemadir']
-    key = module.params['key']
-    value = module.params['value']
+    settings = module.params['settings']
+    any_changed = False
+    unchanged_settings = list()
+    changed_settings = list()
 
-    old_value = _get_value(schemadir, user, key)
-    changed = old_value != value
+    dbus_addr = _get_dbus_bus_address(user)
 
-    if changed and not module.check_mode:
-        _set_value(schemadir, user, key, value)
+    for key, value in settings.items():
+        old_value = _get_value(schemadir, user, key, dbus_addr)
+        result = { 'key': key, 'value': old_value }
+        changed = old_value != value
+        any_changed = any_changed or changed
+
+        if changed and not module.check_mode:
+            _set_value(schemadir, user, key, value, dbus_addr)
+            result['new_value'] = value
+            changed_settings.append(result)
+        else:
+            unchanged_settings.append(result)
 
     module.exit_json(**{
-        'changed': changed,
-        'key': key,
-        'value': value,
-        'old_value': old_value,
+        'changed': any_changed,
+        'unchanged_settings': unchanged_settings,
+        'changed_settings': changed_settings,
     })
+
 
 main()
