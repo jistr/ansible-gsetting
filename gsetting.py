@@ -86,7 +86,9 @@ def main():
             'state': { 'choices': ['present'], 'default': 'present' },
             'user': { 'default': None },
             'schemadir': { 'required': False },
-            'settings': { 'type': 'dict', "required": True },
+            'key': { 'required': False },
+            'value': { 'required': False },
+            'settings': { 'type': 'dict', "required": False, 'default': dict() },
         },
         supports_check_mode = True,
     )
@@ -95,10 +97,19 @@ def main():
     state = module.params['state']
     user = module.params['user']
     schemadir = module.params['schemadir']
+    key = module.params['key']
+    value = module.params['value']
     settings = module.params['settings']
     any_changed = False
     unchanged_settings = list()
     changed_settings = list()
+
+    if key is None and len(settings) == 0:
+        module.fail_json(msg="Either a key or a settings dict is required, "
+                             "neither was provided.")
+
+    if key is not None:
+        settings[key] = value
 
     dbus_addr = _get_dbus_bus_address(user)
 
