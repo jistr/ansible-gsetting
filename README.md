@@ -17,16 +17,18 @@ Usage examples
     - name: do not remember mount password
       gsetting:
         user: jistr
-        key: org.gnome.shell.remember-mount-password
-        value: false
+        settings:
+          org.gnome.shell.remember-mount-password: false
+          org.gnome.desktop.wm.keybindings.panel-main-menu: "@as []"
+          org.gnome.nautilus.preferences.default-folder-viewer: "'list-view'"
 
 If you want to run Ansible as the user you want to adjust settings
 for, you should omit the `user` parameter:
 
     - name: shortcut panel-main-menu
       gsetting:
-        key: org.gnome.desktop.wm.keybindings.panel-main-menu
-        value: "@as []"
+        settings:
+          org.gnome.desktop.wm.keybindings.panel-main-menu: "@as []"
 
 Be careful with string values, which should be passed into GSetting
 single-quoted. You'll need to quote the value twice in YAML:
@@ -34,11 +36,11 @@ single-quoted. You'll need to quote the value twice in YAML:
     - name: nautilus use list view
       gsetting:
         user: jistr
-        key: org.gnome.nautilus.preferences.default-folder-viewer
-        value: "'list-view'"
+        settings:
+          org.gnome.nautilus.preferences.default-folder-viewer: "'list-view'"
 
     - name: nautilus list view columns
       gsetting:
         user: jistr
-        key: org.gnome.nautilus.list-view.default-visible-columns
-        value: "['name', 'size', 'date_modified', 'permissions', 'owner', 'group']"
+        settings:
+          org.gnome.nautilus.list-view.default-visible-columns: "['name', 'size', 'date_modified', 'permissions', 'owner', 'group']"
