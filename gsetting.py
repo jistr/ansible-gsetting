@@ -19,8 +19,33 @@ def _split_key(full_key):
     return (schema, single_key)
 
 def _get_gnome_version():
-    return tuple(map(int, (_check_output_strip(
-        ['gnome-shell', '--version']).split(' ')[2].split('.'))))
+    try:
+        return tuple(map(int, (_check_output_strip(
+            ['gnome-shell', '--version']).split(' ')[2].split('.'))))
+    except FileNotFoundError:
+        return None
+
+def _get_gnome_session_pid(user):
+    gnome_ver = _get_gnome_version()
+    if (gnome_ver and gnome_ver >= (3, 33, 90)):
+        # From GNOME 3.33.90 session process has changed
+        # https://github.com/GNOME/gnome-session/releases/tag/3.33.90
+        pgrep_cmd = ['pgrep', '-u', user, '-f', 'session=gnome']
+    else:
+        pgrep_cmd = ['pgrep', '-u', user, 'gnome-session']
+
+    try:
+        return _check_output_strip(pgrep_cmd)
+    except subprocess.CalledProcessError:
+        return None
+
+def _get_phoc_session_pid(user):
+    pgrep_cmd = ['pgrep', '-u', user, 'phoc']
+
+    try:
+        return _check_output_strip(pgrep_cmd)
+    except subprocess.CalledProcessError:
+       return None
 
 def _get_dbus_bus_address(user):
     if user is None:
@@ -29,18 +54,7 @@ def _get_dbus_bus_address(user):
 
         return "DBUS_SESSION_BUS_ADDRESS={}".format(environ['DBUS_SESSION_BUS_ADDRESS'])
 
-    pgrep_cmd = ['pgrep', '-u', user, 'gnome-session']
-    gnome_ver = _get_gnome_version()
-    if (gnome_ver >= (3, 33, 90)):
-        # From GNOME 3.33.90 session process has changed
-        # https://github.com/GNOME/gnome-session/releases/tag/3.33.90
-        pgrep_cmd = ['pgrep', '-u', user, '-f', 'session=gnome']
-
-    try:
-        pid = _check_output_strip(pgrep_cmd)
-    except subprocess.CalledProcessError:
-       return None
-
+    pid = _get_gnome_session_pid(user) or _get_phoc_session_pid(user)
     if pid:
         return _check_output_strip(
             ['grep', '-z', '^DBUS_SESSION_BUS_ADDRESS',
