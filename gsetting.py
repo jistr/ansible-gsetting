@@ -18,9 +18,15 @@ def _split_key(full_key):
     single_key = key_array[-1]
     return (schema, single_key)
 
+def _maybe_int(val):
+    try:
+        return int(val)
+    except ValueError:
+        return 0
+
 def _get_gnome_version():
     try:
-        return tuple(map(int, (_check_output_strip(
+        return tuple(map(_maybe_int, (_check_output_strip(
             ['gnome-shell', '--version']).split(' ')[2].split('.'))))
     except FileNotFoundError:
         return None
