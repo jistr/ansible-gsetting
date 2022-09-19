@@ -33,7 +33,20 @@ def _get_gnome_version():
 
 def _get_gnome_session_pid(user):
     gnome_ver = _get_gnome_version()
-    if (gnome_ver and gnome_ver >= (3, 33, 90)):
+    if gnome_ver and gnome_ver >= (42,):
+        # It's actually ghome-session-binary, but pgrep uses /proc/#/status,
+        # which truncates the process name at 15 characters.
+        #
+        # Note that this may _also_ work for GNOME 3.33.90, i.e., the code
+        # block below, but I'm preserving that behavior because I don't have
+        # earlier GNOME versions to check.
+        #
+        # Note also that the code block below won't work when the default
+        # session named "gnome" isn't used. For example, in recent versions of
+        # ubuntu the session name is "ubuntu", i.e., "session=ubuntu" rather
+        # than "session=gnome".
+        pgrep_cmd = ['pgrep', '-u', user, 'gnome-session-b']
+    elif gnome_ver and gnome_ver >= (3, 33, 90):
         # From GNOME 3.33.90 session process has changed
         # https://github.com/GNOME/gnome-session/releases/tag/3.33.90
         pgrep_cmd = ['pgrep', '-u', user, '-f', 'session=gnome']
@@ -41,7 +54,10 @@ def _get_gnome_session_pid(user):
         pgrep_cmd = ['pgrep', '-u', user, 'gnome-session']
 
     try:
-        return _check_output_strip(pgrep_cmd)
+        # At least in GNOME 42, there are multiple gnome-session-binary
+        # processes, and we only want the first one.
+        lines = _check_output_strip(pgrep_cmd)
+        return lines.split()[0]
     except subprocess.CalledProcessError:
         return None
 
