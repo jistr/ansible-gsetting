@@ -34,7 +34,7 @@ def _get_gnome_version():
 def _get_gnome_session_pid(user):
     gnome_ver = _get_gnome_version()
     if gnome_ver and gnome_ver >= (42,):
-        # It's actually ghome-session-binary, but pgrep uses /proc/#/status,
+        # It's actually gnome-session-binary, but pgrep uses /proc/#/status,
         # which truncates the process name at 15 characters.
         #
         # Note that this may _also_ work for GNOME 3.33.90, i.e., the code
