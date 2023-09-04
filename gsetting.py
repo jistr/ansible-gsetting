@@ -4,7 +4,8 @@ from os import environ
 import re
 import subprocess
 
-from ansible.module_utils.basic import *
+from ansible.module_utils.basic import AnsibleModule
+
 
 class Setting:
     def __init__(self, schema, path, key):
@@ -29,8 +30,10 @@ class Setting:
 def _check_output_strip(command):
     return subprocess.check_output(command).decode('utf-8').strip()
 
+
 def _escape_single_quotes(string):
     return re.sub("'", r"'\''", string)
+
 
 def _maybe_int(val):
     try:
@@ -38,12 +41,14 @@ def _maybe_int(val):
     except ValueError:
         return 0
 
+
 def _get_gnome_version():
     try:
         return tuple(map(_maybe_int, (_check_output_strip(
             ['gnome-shell', '--version']).split(' ')[2].split('.'))))
     except FileNotFoundError:
         return None
+
 
 def _get_gnome_session_pid(user):
     gnome_ver = _get_gnome_version()
@@ -75,26 +80,30 @@ def _get_gnome_session_pid(user):
     except subprocess.CalledProcessError:
         return None
 
+
 def _get_phoc_session_pid(user):
     pgrep_cmd = ['pgrep', '-u', user, 'phoc']
 
     try:
         return _check_output_strip(pgrep_cmd)
     except subprocess.CalledProcessError:
-       return None
+        return None
+
 
 def _get_dbus_bus_address(user):
     if user is None:
         if environ.get('DBUS_SESSION_BUS_ADDRESS') is None:
             return None
 
-        return "DBUS_SESSION_BUS_ADDRESS={}".format(environ['DBUS_SESSION_BUS_ADDRESS'])
+        return "DBUS_SESSION_BUS_ADDRESS={}".format(
+            environ['DBUS_SESSION_BUS_ADDRESS'])
 
     pid = _get_gnome_session_pid(user) or _get_phoc_session_pid(user)
     if pid:
         return _check_output_strip(
             ['grep', '-z', '^DBUS_SESSION_BUS_ADDRESS',
              '/proc/{}/environ'.format(pid)]).strip('\0')
+
 
 def _run_cmd_with_dbus(user, cmd, dbus_addr):
     if not dbus_addr:
@@ -106,7 +115,8 @@ def _run_cmd_with_dbus(user, cmd, dbus_addr):
     if user is None:
         return _check_output_strip(['/bin/sh', '-c', " ".join(command)])
 
-    return _check_output_strip(['su', '-', user , '-c', " ".join(command)])
+    return _check_output_strip(['su', '-', user, '-c', " ".join(command)])
+
 
 def _set_value(schemadir, user, setting, value, dbus_addr):
     command = ['/usr/bin/gsettings']
@@ -118,6 +128,7 @@ def _set_value(schemadir, user, setting, value, dbus_addr):
 
     return _run_cmd_with_dbus(user, command, dbus_addr)
 
+
 def _get_value(schemadir, user, setting, dbus_addr):
     command = ['/usr/bin/gsettings']
     if schemadir:
@@ -127,24 +138,23 @@ def _get_value(schemadir, user, setting, dbus_addr):
 
     return _run_cmd_with_dbus(user, command, dbus_addr)
 
+
 def main():
 
     module = AnsibleModule(
-        argument_spec = {
-            'state': { 'choices': ['present'], 'default': 'present' },
-            'user': { 'default': None },
-            'schemadir': { 'required': False },
-            'schema': { 'required': False },
-            'path': { 'required': False },
-            'key': { 'required': False },
-            'value': { 'required': False },
-            'settings': { 'type': 'dict', "required": False, 'default': dict() },
+        argument_spec={
+            'state': {'choices': ['present'], 'default': 'present'},
+            'user': {'default': None},
+            'schemadir': {'required': False},
+            'schema': {'required': False},
+            'path': {'required': False},
+            'key': {'required': False},
+            'value': {'required': False},
+            'settings': {'type': 'dict', "required": False, 'default': dict()},
         },
-        supports_check_mode = True,
+        supports_check_mode=True,
     )
 
-    params = module.params
-    state = module.params['state']
     user = module.params['user']
     schemadir = module.params['schemadir']
     schema = module.params['schema']
@@ -166,13 +176,13 @@ def main():
         parsed_settings.append([Setting(schema, path, key), value])
 
     for key, value in settings.items():
-        parsed_settings.append([Setting(schema, path, key), value]);
+        parsed_settings.append([Setting(schema, path, key), value])
 
     dbus_addr = _get_dbus_bus_address(user)
 
     for setting, value in parsed_settings:
         old_value = _get_value(schemadir, user, setting, dbus_addr)
-        result = { 'key': key, 'value': old_value }
+        result = {'key': key, 'value': old_value}
         changed = old_value != value
         any_changed = any_changed or changed
 
