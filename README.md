@@ -14,6 +14,32 @@ Installation
 Usage examples
 --------------
 
+    # Embed the schema in the key
+    - name: turn off hot corners
+      gsetting:
+        user: jistr
+        key: org.gnome.desktop.interface.enable-hot-corners
+        value: "{{'false'|string}}"
+        
+    # Specify the schema separately
+    - name: turn off hot corners
+      gsetting:
+        user: jistr
+        schema: org.gnome.desktop.interface
+        key: enable-hot-corners
+        value: "{{'false'|string}}"
+    
+    # Use a relocatable schema
+    - name: set custom key binding
+      gsetting:
+        user: jistr
+        schema: org.gnome.settings-daemon.plugins.media-keys.custom-keybinding
+        path: /org/gnome/settings-daemon/plugins/media-keys/custom-keybindings/custom0/
+        settings:
+          name: Flameshot
+          binding: Print
+          command: flameshot gui
+    
     - name: do not remember mount password
       gsetting:
         user: jistr
